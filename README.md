@@ -80,7 +80,9 @@ These are the files provided as material from the website, available in this rep
 
 * `um-spec.txt`: Specification for the Universal Machine
 
-* `codex.umz`: The codex (Volume ID 9). Decryption key `(\b.bb)(\v.vv)06FHPVboundvarHRAk`.
+* `codex.umz`: The codex (Volume ID 9).
+
+* `codex-decryption-key.txt`: The decryption key `(\b.bb)(\v.vv)06FHPVboundvarHRAk` for the codex, as a text file. 
 
 * `sandmark.umz`: Benchmark for the Universal Machine
 
