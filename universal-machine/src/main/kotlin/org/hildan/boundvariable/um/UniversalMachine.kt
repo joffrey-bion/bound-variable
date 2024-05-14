@@ -1,8 +1,7 @@
 package org.hildan.boundvariable.um
 
+import java.io.*
 import kotlin.io.path.*
-
-typealias Registers = IntArray
 
 fun main(args: Array<String>) {
     if (args.isEmpty()) {
@@ -11,58 +10,127 @@ fun main(args: Array<String>) {
     }
     val programs = args.map { Path(it).readBytes() }
     val uberProgram = programs.reduce { a, b -> a + b }
-    UniversalMachine(uberProgram).run()
+    UniversalMachine.run(uberProgram)
 }
 
 /**
  * The Universal Machine.
  */
-class UniversalMachine(program: IntArray) {
-
-    private val registers: Registers = IntArray(N_REGISTERS)
-    private val memory: Memory = Memory(program)
+class UniversalMachine(
+    initialProgram: IntArray,
+    private val stdin: InputStream = System.`in`,
+    private val stdout: PrintStream = System.out,
+) {
+    private val registers: IntArray = IntArray(8)
+    private val memory: Memory = Memory(initialProgram)
     private var finger: Int = 0
 
-    constructor(legacyProgram: ByteArray) : this(legacyProgram.concatBytesToIntsBE())
+    @OptIn(ExperimentalStdlibApi::class)
+    private fun run() {
+        while (true) {
+            val instruction = memory[0][finger++]
 
-    fun run() {
-        try {
-            while (true) {
-                val instruction = memory[0][finger]
-                val operator = Operator.decode(instruction)
-                finger = operator.execute(registers, memory, finger)
+            val a = (instruction ushr 6) and 0x7
+            val b = (instruction ushr 3) and 0x7
+            val c = instruction and 0x7
+
+            when (val code = instruction ushr 28) {
+                0x0 -> conditionalMove(a, b, c)
+                0x1 -> arrayIndex(a, b, c)
+                0x2 -> arrayAmendment(a, b, c)
+                0x3 -> addition(a, b, c)
+                0x4 -> multiplication(a, b, c)
+                0x5 -> division(a, b, c)
+                0x6 -> notAnd(a, b, c)
+                0x7 -> return
+                0x8 -> allocation(b = b, c = c)
+                0x9 -> abandonment(c = c)
+                0xA -> output(c = c)
+                0xB -> input(c = c)
+                0xC -> loadProgram(b = b, c = c)
+                0xD -> orthography(a = (instruction shr 25) and 0x7, data = instruction and 0x1FFFFFF)
+                else -> error("invalid instruction code $code (instruction 0x${instruction.toHexString()})")
             }
-        } catch (e: HaltProgram) {
-            return
         }
     }
 
-    companion object {
-        const val N_REGISTERS: Int = 8
+    private fun conditionalMove(a: Int, b: Int, c: Int) {
+        if (registers[c] != 0) {
+            registers[a] = registers[b]
+        }
     }
-}
 
-/**
- * Creates an [IntArray] by concatenating bytes from this [ByteArray] in groups of 4.
- * The bytes are read in big-endian order: the MSB first.
- */
-private fun ByteArray.concatBytesToIntsBE() = IntArray(size / 4) {
-    val bytePos = it * 4
-    intOf(
-        a = this[bytePos],
-        b = this[bytePos + 1],
-        c = this[bytePos + 2],
-        d = this[bytePos + 3],
-    )
-}
+    private fun arrayIndex(a: Int, b: Int, c: Int) {
+        val address = registers[b]
+        val offset = registers[c]
+        registers[a] = memory[address][offset]
+    }
 
-/**
- * Concatenates the given 4 bytes into an integer, where [a] is the MSB and [d] the LSB.
- */
-private fun intOf(a: Byte, b: Byte, c: Byte, d: Byte): Int {
-    val aa = a.toInt() and 0xFF shl 24
-    val bb = b.toInt() and 0xFF shl 16
-    val cc = c.toInt() and 0xFF shl 8
-    val dd = d.toInt() and 0xFF
-    return aa or bb or cc or dd
+    private fun arrayAmendment(a: Int, b: Int, c: Int) {
+        val address = registers[a]
+        val offset = registers[b]
+        memory[address][offset] = registers[c]
+    }
+
+    private fun addition(a: Int, b: Int, c: Int) {
+        registers[a] = registers[b] + registers[c]
+    }
+
+    private fun multiplication(a: Int, b: Int, c: Int) {
+        registers[a] = registers[b] * registers[c]
+    }
+
+    private fun division(a: Int, b: Int, c: Int) {
+        val divisor = registers[c]
+        if (divisor == 0) {
+            error("division by 0")
+        }
+        registers[a] = (registers[b].toUInt() / divisor.toUInt()).toInt() // TODO check sign
+    }
+
+    private fun notAnd(a: Int, b: Int, c: Int) {
+        registers[a] = (registers[b] and registers[c]).inv()
+    }
+
+    private fun allocation(b: Int, c: Int) {
+        registers[b] = memory.alloc(capacity = registers[c])
+    }
+
+    private fun abandonment(c: Int) {
+        memory.free(address = registers[c])
+    }
+
+    private fun output(c: Int) {
+        val output = registers[c]
+        if (output > 255) {
+            error("invalid output value $output")
+        }
+        stdout.print(output.toChar()) // flushes on EOL
+    }
+
+    private fun input(c: Int) {
+        val inputByte = stdin.read()
+        if (inputByte < 0) {
+            error("unexpected end of input")
+        }
+        registers[c] = inputByte
+    }
+
+    private fun loadProgram(b: Int, c: Int) {
+        val address = registers[b]
+        if (address != 0) { // no need for a copy in that case, it's just for the finger move
+            memory.loadProgramFrom(address = address)
+        }
+        finger = registers[c]
+    }
+
+    private fun orthography(a: Int, data: Int) {
+        registers[a] = data
+    }
+
+    companion object {
+        fun run(program: ByteArray, stdin: InputStream = System.`in`, stdout: PrintStream = System.out) {
+            UniversalMachine(program.concatBytesToIntsBE(), stdin, stdout).run()
+        }
+    }
 }
