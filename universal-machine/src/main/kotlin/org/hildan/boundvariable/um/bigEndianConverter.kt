@@ -4,14 +4,17 @@ package org.hildan.boundvariable.um
  * Creates an [IntArray] by concatenating bytes from this [ByteArray] in groups of 4.
  * The bytes are read in big-endian order: the MSB first.
  */
-internal fun ByteArray.concatBytesToIntsBE() = IntArray(size / 4) {
-    val bytePos = it * 4
-    intOf(
-        a = this[bytePos],
-        b = this[bytePos + 1],
-        c = this[bytePos + 2],
-        d = this[bytePos + 3],
-    )
+fun ByteArray.concatBytesToIntsBE(): IntArray {
+    require(size % 4 == 0) { "number of bytes should be a multiple of 4" }
+    return IntArray(size / 4) {
+        val bytePos = it * 4
+        intOf(
+            a = this[bytePos],
+            b = this[bytePos + 1],
+            c = this[bytePos + 2],
+            d = this[bytePos + 3],
+        )
+    }
 }
 
 /**
