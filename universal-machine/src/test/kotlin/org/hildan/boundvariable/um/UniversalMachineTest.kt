@@ -12,7 +12,7 @@ class UniversalMachineTest {
         val sandmarkExpectedOutput = Path("../material/sandmark-expected-output.txt").readText()
 
         val outputStream = ByteArrayOutputStream()
-        UniversalMachine.run(program = sandmarkProgram, stdout = PrintStream(outputStream))
+        UniversalMachine.run(program = sandmarkProgram, stdout = outputStream)
 
         assertEquals(sandmarkExpectedOutput, outputStream.toString(Charsets.US_ASCII))
     }

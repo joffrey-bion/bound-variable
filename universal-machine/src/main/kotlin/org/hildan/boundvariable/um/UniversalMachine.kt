@@ -19,7 +19,7 @@ fun main(args: Array<String>) {
 class UniversalMachine(
     initialProgram: IntArray,
     private val stdin: InputStream = System.`in`,
-    private val stdout: PrintStream = System.out,
+    private val stdout: OutputStream = System.out,
 ) {
     private val registers: IntArray = IntArray(8)
     private val memory: Memory = Memory(initialProgram)
@@ -106,7 +106,11 @@ class UniversalMachine(
         if (output > 255) {
             error("invalid output value $output")
         }
-        stdout.print(output.toChar()) // flushes on EOL
+        // Writes the 8 lowest-order bits of the integer, which is ok even for 255 (0x000000FF -> 0xFF).
+        // In that case it will result in the byte -1 (or, considered unsigned, still 255) which is the correct value.
+        // Converting to Char and using print() is incorrect.
+        stdout.write(output)
+        stdout.flush() // even though print streams auto-flush after \n, we want to flush after prompts too
     }
 
     private fun input(c: Int) {
@@ -130,7 +134,7 @@ class UniversalMachine(
     }
 
     companion object {
-        fun run(program: ByteArray, stdin: InputStream = System.`in`, stdout: PrintStream = System.out) {
+        fun run(program: ByteArray, stdin: InputStream = System.`in`, stdout: OutputStream = System.out) {
             UniversalMachine(program.concatBytesToIntsBE(), stdin, stdout).run()
         }
     }
