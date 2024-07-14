@@ -42,7 +42,7 @@ class UniversalMachine(
                 0x4 -> multiplication(a, b, c)
                 0x5 -> division(a, b, c)
                 0x6 -> notAnd(a, b, c)
-                0x7 -> return
+                0x7 -> break
                 0x8 -> allocation(b = b, c = c)
                 0x9 -> abandonment(c = c)
                 0xA -> output(c = c)
@@ -52,6 +52,7 @@ class UniversalMachine(
                 else -> error("invalid instruction code $code (instruction 0x${instruction.toHexString()})")
             }
         }
+        stdout.flush()
     }
 
     private fun conditionalMove(a: Int, b: Int, c: Int) {
