@@ -5,7 +5,8 @@ class Memory(initialProgram: IntArray) {
     private val data = mutableListOf<IntArray?>(initialProgram)
     private val freeAddresses = ArrayDeque<Int>()
 
-    operator fun get(address: Int): IntArray = data[address] ?: error("accessing unallocated address $address")
+    operator fun get(address: Int): IntArray = data.getOrNull(address)
+        ?: error("accessing unallocated memory address $address (current memory size: ${data.size}, free addresses: $freeAddresses)")
 
     fun alloc(capacity: Int): Int {
         val newArray = IntArray(capacity)
