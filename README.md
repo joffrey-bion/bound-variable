@@ -1,6 +1,8 @@
 # The ICFP Bound Variable problem
 
-This is my implementation of the 2006 ICFP bound variable problem.
+This is my implementation of the 2006 ICFP bound variable problem (full solution in
+[SOLUTION.md](solution%2FSOLUTION.md)).
+
 See http://www.boundvariable.org/task.shtml for the original task description.
 The following is my markdown version of it.
 
